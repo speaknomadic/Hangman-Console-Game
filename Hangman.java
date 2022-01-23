@@ -10,49 +10,55 @@ import java.util.Vector;
 
 public class Hangman {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 
-        StringBuilder guesses = new StringBuilder();
-        String wordToGuess = loadRandomWord("C:\\Users\\I356255\\Desktop\\nbu\\words.txt");
-        int tries = 0;
-        boolean win;
-
+        StringBuilder lettersUsed = new StringBuilder();
+        String wordToGuess = loadRandomWord(readWordsFromFile("C:\\Users\\I356255\\Desktop\\nbu\\words.txt"));
+        if (wordToGuess == null || wordToGuess.isBlank())
+            throw new Exception("Invalid word");
+        int attempts = 0;
+        boolean hasWon;
         Scanner scanner = new Scanner(System.in);
         do {
-
             printMessage("HangMan", true, true);
-            drawHangman(tries);
-            printAvailableLetters(guesses.toString());
+            drawHangman(attempts);
+            printAvailableLetters(lettersUsed.toString());
             printMessage("Guess the Word", true, true);
+            hasWon = printWordCheckWin(wordToGuess, lettersUsed.toString());
 
-            win = printWordCheckWin(wordToGuess, guesses.toString());
-
-            if (win)
+            if (hasWon) {
                 break;
-            char x;
-            System.out.println(">");
-
-            x = scanner.next().charAt(0);
-            if (guesses.indexOf(String.valueOf(x)) == - 1) {
-                guesses.append(x);
             }
-            tries = triesLeft(wordToGuess, guesses.toString());
-        } while (tries < 10);
-        if (win) {
+
+            char x = getUserInput(scanner);
+
+            if (lettersUsed.indexOf(String.valueOf(x)) == - 1) {
+                lettersUsed.append(x);
+            }
+            attempts = triesLeft(wordToGuess, lettersUsed.toString());
+        } while (attempts < 10);
+        if (hasWon) {
             printMessage("You WON!", true, true);
         } else {
             printMessage(" Game over!", true, true);
             printMessage(" The word is " + wordToGuess, true, true);
         }
         scanner.close();
-        guesses.setLength(0);
+    }
+
+    private static char getUserInput(Scanner scanner) {
+        char x;
+        do {
+            System.out.println(">");
+            x = scanner.next().charAt(0);
+        }
+        while (! isBasicLetter(x));
+        return x;
     }
 
     /**
      * printMessage() prints the game console box and positions any text in the middle.
-     * @param message
-     * @param printTop
-     * @param printBottom
+     *
      */
     static void printMessage(String message, boolean printTop, boolean printBottom) {
         if (printTop) {
@@ -127,31 +133,26 @@ public class Hangman {
      * printLetters() prints the menu of Available letters, which are left for guessing, from char to char, avoiding the letters which are in the input string.
      * In their place a space is printed.
      *
-     * @param input
-     * @param from
-     * @param to
      */
-    static void printLetters(String input, char from, char to) {
-        StringBuilder s = new StringBuilder();
+    static void printLetters(String lettersUsed, char from, char to) {
+        StringBuilder s = new StringBuilder(33);
         for (char i = from; i <= to; i++) {
-            if (input.indexOf(i) == - 1) {
+            if (lettersUsed.indexOf(i) == - 1) {
                 s.append(i);
             }
             s.append(" ");
         }
         printMessage(s.toString(), false, false);
-        s.setLength(0);
     }
 
     /**
      * printAvailableLetters() prints all the letters available for play, which have not been tried yet.
      * If a letter has already been tried, an empty space is printed in its place.
-     * @param taken
      */
-    static void printAvailableLetters(String taken) {
+    static void printAvailableLetters(String lettersUsed) {
         printMessage("Available Letters", true, true);
-        printLetters(taken, 'a', 'm');
-        printLetters(taken, 'n', 'z');
+        printLetters(lettersUsed, 'a', 'm');
+        printLetters(lettersUsed, 'n', 'z');
     }
 
     /**
@@ -159,15 +160,15 @@ public class Hangman {
      * If any letter is correct, it is printed in its place, if any is missing an underscore is printed in its place.
      * If all letters in the word for guessing are in the guessed word the won equals to true, there is winner.
      * @param word
-     * @param guessed
+     * @param usedLetters
      * @return
      */
-    static boolean printWordCheckWin(String word, String guessed) {
+    static boolean printWordCheckWin(String word, String usedLetters) {
         boolean won = true;
-        StringBuilder s = new StringBuilder();
+        StringBuilder s = new StringBuilder(33);
 
         for (int i = 0; i < word.length(); i++) {
-            if (guessed.lastIndexOf(word.charAt(i)) == - 1) {
+            if (usedLetters.indexOf(word.charAt(i)) == - 1) {
                 won = false;
                 s.append("_");
             } else {
@@ -176,35 +177,44 @@ public class Hangman {
             }
         }
         printMessage(s.toString(), false, false);
-        s.setLength(0);
         return won;
     }
 
     /**
-     * loadRandomWord(). Reads all the words from a text file, and adds them to a Vector.
+     * loadRandomWord().
      * Loads word randomly.
-     * @param path
+     * @param  vector
      * @return word
      *
      */
-    static String loadRandomWord(String path) {
-        int lineCount = 0;
-        String word = "";
-        Vector<String> v = new Vector<>(7000);
+    static String loadRandomWord(Vector<String> vector) throws Exception {
+        if (vector.size() == 0) {
+            throw new Exception("Invalid input");
+        }
+        Random rand = new Random();
+        int randLine = rand.nextInt(vector.size());
+        String word = vector.elementAt(randLine);
+        return word;
+    }
+
+    /**
+     * readWordsFromFile(). Reads all the words from a text file, and adds them to a Vector.
+     *
+     * @param path
+     * @return vector
+     *
+     */
+    static Vector<String> readWordsFromFile(String path) {
+
+        Vector<String> vector = new Vector<>(69900);
         BufferedReader objReader = null;
         try {
             String strCurrentLine;
             objReader = Files.newBufferedReader(Paths.get(path));
 
             while ((strCurrentLine = objReader.readLine()) != null) {
-                v.add(strCurrentLine);
+                vector.add(strCurrentLine);
             }
-            Random rand = new Random();
-            int min = 0;
-            int max = v.size();
-            int randLine = (int) Math.floor(Math.random() * (max - min + 1) + min);
-
-            word = v.elementAt(randLine);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -217,22 +227,26 @@ public class Hangman {
                 ex.printStackTrace();
             }
         }
-        return word;
+        return vector;
     }
 
     /**
      * triesLeft() counts the number of letters which are incorrect.
      * @param word
-     * @param guessedWord
+     * @param guessedLetters
      * @return
      */
-    static int triesLeft(String word, String guessedWord) {
+    static int triesLeft(String word, String guessedLetters) {
         int error = 0;
-        for (int i = 0; i < guessedWord.length(); i++) {
-            if (word.indexOf(guessedWord.charAt(i)) == - 1) {
+        for (int i = 0; i < guessedLetters.length(); i++) {
+            if (word.indexOf(guessedLetters.charAt(i)) == - 1) {
                 error++;
             }
         }
         return error;
+    }
+
+    static boolean isBasicLetter(char c) {
+        return (c >= 'a' && c <= 'z');
     }
 }
